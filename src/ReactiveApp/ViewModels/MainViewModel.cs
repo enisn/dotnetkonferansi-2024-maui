@@ -55,11 +55,7 @@ public class MainViewModel : ReactiveObject, IActivatableViewModel
             // Track changes of TemperatureC and calculate the average
             Items.ToObservableChangeSet()
                 .WhenValueChanged(x => x.TemperatureC)
-                .Subscribe(_ =>
-                {
-                    Average = Items.Any() ? Items.Average(x => x.TemperatureC) : 0;
-                    Console.WriteLine($"Updated Average: {Average}, Items count: {Items.Count}");
-                })
+                .Subscribe(_ => Average = Items.Any() ? Items.Average(x => x.TemperatureC) : 0)
                 .DisposeWith(disposables);
 
             this.RaisePropertyChanged(nameof(Items));
