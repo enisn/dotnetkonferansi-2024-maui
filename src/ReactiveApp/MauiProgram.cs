@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using ReactiveUI;
+using ReactiveUI.Maui;
 
 namespace ReactiveApp;
 public static class MauiProgram
