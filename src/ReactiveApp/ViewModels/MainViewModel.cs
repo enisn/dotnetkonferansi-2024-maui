@@ -4,13 +4,14 @@ using ReactiveApp.Models;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 using System.Collections.ObjectModel;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 
 namespace ReactiveApp.ViewModels;
 public class MainViewModel : ReactiveObject, IActivatableViewModel
 {
-    private ReadOnlyObservableCollection<WeatherForecastViewModel> items;
+    private ReadOnlyObservableCollection<WeatherForecastViewModel> items = ReadOnlyObservableCollection<WeatherForecastViewModel>.Empty;
 
     public ReadOnlyObservableCollection<WeatherForecastViewModel> Items => items;
 
@@ -20,14 +21,20 @@ public class MainViewModel : ReactiveObject, IActivatableViewModel
 
     [Reactive] public double Average { get; private set; }
 
-    [Reactive] public string SearchTerm { get; set; }
+    [Reactive] public string SearchTerm { get; set; } = string.Empty;
 
     [Reactive] public SortDirection SortDirection { get; set; }
 
-    public ViewModelActivator Activator { get; } = new ViewModelActivator();
+    public ReactiveCommand<Unit, Unit> LoadDataCommand { get; }
+
+    [Reactive] public bool IsBusy { get; set; }
+
+    public ViewModelActivator Activator { get; } = new ();
 
     public MainViewModel()
     {
+        LoadDataCommand = ReactiveCommand.CreateFromTask(LoadDataAsync);
+
         this.WhenActivated(disposables =>
         {
             var observableFilter = this
@@ -58,14 +65,22 @@ public class MainViewModel : ReactiveObject, IActivatableViewModel
                 .Subscribe(_ => Average = Items.Any() ? Items.Average(x => x.TemperatureC) : 0)
                 .DisposeWith(disposables);
 
+            // Update average when items change
+            Items.WhenAnyValue(x => x.Count)
+                .Subscribe(_ => Average = Items.Any() ? Items.Average(x => x.TemperatureC) : 0)
+                .DisposeWith(disposables);
+
             this.RaisePropertyChanged(nameof(Items));
-            LoadData();
+            LoadDataCommand!.Execute();
         });
+
     }
 
-    private async void LoadData()
+    private async Task LoadDataAsync()
     {
+        IsBusy = true;
         var weathers = await WeatherForecast.GetWeatherForecasts();
+        IsBusy = false;
 
         ItemsSourceList.AddRange(weathers!.Select(x => new WeatherForecastViewModel
         {
