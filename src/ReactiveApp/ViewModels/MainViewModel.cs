@@ -37,11 +37,13 @@ public class MainViewModel : ReactiveObject, IActivatableViewModel
 
         this.WhenActivated(disposables =>
         {
+            #region Filter Builder
             var observableFilter = this
                 .WhenAnyValue(viewModel => viewModel.SearchTerm)
                 .Throttle(TimeSpan.FromMilliseconds(250))
                 .Select(MakeFilter);
-
+            #endregion
+            #region Sort Builder
             var observableSort = ItemsSourceList.Connect()
                 .WhenValueChanged(x => x.TemperatureC)
                 .Throttle(TimeSpan.FromMilliseconds(500))
@@ -50,7 +52,8 @@ public class MainViewModel : ReactiveObject, IActivatableViewModel
             var observableSortAscending = this
                 .WhenAnyValue(viewModel => viewModel.SortDirection)
                 .Select(_ => MakeSort());
-
+            #endregion
+            
             ItemsSourceList.Connect()
                 .Filter(observableFilter)
                 .Sort(observableSort.Merge(observableSortAscending))
@@ -78,6 +81,11 @@ public class MainViewModel : ReactiveObject, IActivatableViewModel
 
     private async Task LoadDataAsync()
     {
+        if(ItemsSourceList.Count > 15)
+        {
+            throw new Exception("ItemsSourceList has reached the maximum number of items.");
+        }
+        
         IsBusy = true;
         var weathers = await WeatherForecast.GetWeatherForecasts();
         IsBusy = false;
